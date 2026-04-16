@@ -1,2 +1,9 @@
 [tool.uv.workspace]
 members = ["pre_processing", "scrapper"]
+
+[dependency-groups]
+dev = [
+    "geopy>=2.4.1",
+    "matplotlib>=3.10.8",
+    "seaborn>=0.13.2",
+]
