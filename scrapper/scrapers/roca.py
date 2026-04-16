@@ -26,9 +26,9 @@ def _parse_doc(doc: dict) -> dict:
     categoria = doc.get("namCategory", "")
     subcategoria = doc.get("namSubCategory", "")
 
-    area_total = str(doc["prop_char_5"]) if doc.get("prop_char_5") else ""
-    area_util = str(doc["prop_char_2"]) if doc.get("prop_char_2") else ""
-    area_construida = str(doc["prop_char_95"]) if doc.get("prop_char_95") else ""
+    area_construida = str(doc["prop_char_1"]) if doc.get("prop_char_1") else ""
+    area_total = str(doc["prop_char_2"]) if doc.get("prop_char_2") else ""
+    area_construida_alt = str(doc["prop_char_95"]) if doc.get("prop_char_95") else ""
 
     return {
         "fonte": "Roca",
@@ -47,13 +47,13 @@ def _parse_doc(doc: dict) -> dict:
         "endereco": "",
         "latitude": str(doc.get("latitude", "") or ""),
         "longitude": str(doc.get("longitude", "") or ""),
-        "dormitorios": str(doc.get("totalRooms", "") or ""),
-        "suites": str(doc.get("prop_char_1", "") or ""),
+        "dormitorios": str(doc.get("prop_char_5", "") or ""),
+        "suites": "",
         "banheiros": str(doc.get("prop_char_176", "") or ""),
         "garagens": str(doc.get("totalGarages", "") or ""),
         "area_total": area_total,
-        "area_construida": area_construida,
-        "area_util": area_util,
+        "area_construida": area_construida or area_construida_alt,
+        "area_util": area_construida or area_construida_alt,
         "area_terreno": "",
         "descricao": doc.get("desTitleSite", ""),
         "url": f"{BASE_URL}/imovel/{'locacao' if ind_type == 'L' else 'venda'}"
