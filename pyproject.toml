@@ -1,0 +1,2 @@
+[tool.uv.workspace]
+members = ["pre_processing", "scrapper"]
