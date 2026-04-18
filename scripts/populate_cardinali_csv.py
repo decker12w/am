@@ -1,11 +1,15 @@
-"""Enriquece data/cardinali.csv com lat/lng geocodificados por bairro.
+"""Enriquece data/<fonte>.csv com lat/lng geocodificados por bairro.
 
-A Cardinali não expõe coordenadas por imóvel — o scraper acaba pegando
-a localização da sede (-22.002884, -47.90085) para todo mundo. Este
-script substitui isso por coordenadas geocodificadas a partir de
-(bairro, cidade, estado), com cache em data/bairros_geocode.csv.
+Uso:
+    python scripts/populate_cardinali_csv.py cardinali
+    python scripts/populate_cardinali_csv.py sape
+    python scripts/populate_cardinali_csv.py center
+
+O script substitui coordenadas ausentes/inválidas por geocodificação
+a partir de (bairro, cidade, estado), com cache em data/bairros_geocode.csv.
 """
 
+import sys
 from pathlib import Path
 
 import pandas as pd
@@ -13,8 +17,6 @@ from geopy.geocoders import Nominatim
 from geopy.extra.rate_limiter import RateLimiter
 
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"
-INPUT_CSV = DATA_DIR / "cardinali.csv"
-OUTPUT_CSV = DATA_DIR / "cardinali_enriched.csv"
 CACHE_CSV = DATA_DIR / "bairros_geocode.csv"
 
 
@@ -45,9 +47,12 @@ def geocode_missing(falta: pd.DataFrame) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
-def main() -> None:
-    print(f"Lendo {INPUT_CSV}")
-    df = pd.read_csv(INPUT_CSV)
+def main(fonte: str) -> None:
+    input_csv = DATA_DIR / f"{fonte}.csv"
+    output_csv = DATA_DIR / f"{fonte}.csv"
+
+    print(f"Lendo {input_csv}")
+    df = pd.read_csv(input_csv)
 
     df[["latitude", "longitude"]] = None
 
@@ -70,10 +75,14 @@ def main() -> None:
         how="left",
     )
 
-    df.to_csv(OUTPUT_CSV, index=False)
+    df.to_csv(output_csv, index=False)
     faltando = df["latitude"].isna().sum()
-    print(f"Salvo {OUTPUT_CSV} ({len(df)} linhas, {faltando} sem coord.)")
+    print(f"Salvo {output_csv} ({len(df)} linhas, {faltando} sem coord.)")
 
 
 if __name__ == "__main__":
-    main()
+    if len(sys.argv) < 2:
+        print("Uso: python scripts/populate_cardinali_csv.py <fonte>")
+        print("Exemplo: python scripts/populate_cardinali_csv.py sape")
+        sys.exit(1)
+    main(sys.argv[1])

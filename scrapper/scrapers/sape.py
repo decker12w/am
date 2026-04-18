@@ -14,148 +14,143 @@ LISTING_URLS = [
 ]
 
 def _parse_card(card: BeautifulSoup, session: requests.Session, finalidade: str) -> dict | None:
-    """Extrai informações base do cartão da Sapê Imóveis e acessa links internos."""
-    
-    # URL do Imóvel
-    link_el = card.find("a", href=re.compile(r"^/?Imovel/"))
-    url = ""
-    if link_el:
-        href = link_el.get("href", "")
-        if not href.startswith("http"):
-            href = href.lstrip("/")
-            url = f"{BASE_URL}/{href}"
-        else:
-            url = href
-            
-    if not url:
+    """Extrai informações do cartão da Sapê Imóveis (layout 2025+)."""
+
+    link_el = card.find("a", href=re.compile(r"Detalhes\?id="))
+    if not link_el:
         return None
 
-    # Título (Normalmente tem algo como Cód/Ref)
-    codigo = ""
-    # A referência no Sapê costuma ficar em textos de Ref: 1234
-    ref_el = card.find(string=re.compile(r"Ref\s*:\s*\w+"))
+    href = link_el.get("href", "")
+    if not href.startswith("http"):
+        href = href.lstrip("/")
+        url = f"{BASE_URL}/{href}"
+    else:
+        url = href
+
+    id_match = re.search(r"id=(\d+)", href)
+    codigo = id_match.group(1) if id_match else ""
+
+    ref_el = card.find("span", string=re.compile(r"Ref:\s*\d+"))
     if ref_el:
-        m_codigo = re.search(r"Ref\s*:\s*(\w+)", str(ref_el))
-        if m_codigo:
-            codigo = m_codigo.group(1).strip()
+        m = re.search(r"Ref:\s*(\d+)", ref_el.get_text())
+        if m:
+            codigo = m.group(1)
 
-    titulo_el = card.find(class_=re.compile("card-title"))
-    titulo = titulo_el.get_text(strip=True) if titulo_el else ""
+    titulo_el = card.find("h2", class_=re.compile(r"card-title"))
+    bairro = titulo_el.get_text(strip=True) if titulo_el else ""
 
-    # Subtítulo (Normalmente o Bairro)
-    bairro_el = card.find(class_=re.compile("card-subtitle"))
-    bairro = bairro_el.get_text(strip=True) if bairro_el else ""
+    tipo = ""
+    badges = card.select(".property-card-tags .badge")
+    for badge in badges:
+        txt = badge.get_text(strip=True)
+        if not txt.startswith("Ref"):
+            tipo = txt
+            break
 
-    # Preço principal do Card
     preco_venda = ""
     preco_locacao = ""
-    price_text = ""
-    if titulo_el:
-        price_text = titulo_el.get_text(strip=True)
-    elif card.find("strong", string=re.compile("R\$")):
-        price_text = card.find("strong", string=re.compile("R\$")).get_text(strip=True)
-
-    m_price = re.search(r"R\$\s*([\d.,]+)", price_text)
-    if m_price:
-        if finalidade == "Venda":
-            preco_venda = m_price.group(1).strip()
-        else:
-            preco_locacao = m_price.group(1).strip()
-
-    # Puxar dados da página do imóvel (descrição/valores extras/coordenadas)
     valor_condominio = ""
     valor_iptu = ""
-    latitude = ""
-    longitude = ""
-    endereco = ""
-    descricao = ""
-    tipo = ""
-    
-    # Specs
+
+    price_box = card.select_one(".property-price-box")
+    if price_box:
+        price_divs = price_box.find_all("div")
+        for div in price_divs:
+            txt = div.get_text(strip=True)
+            m_price = re.search(r"R\$\s*([\d.,]+)", txt)
+            if not m_price:
+                continue
+            val = m_price.group(1)
+            if "cond" in txt.lower():
+                valor_condominio = val
+            elif "iptu" in txt.lower():
+                valor_iptu = val
+            elif "mês" in txt.lower() or "m\u00eas" in txt.lower():
+                if finalidade == "Venda":
+                    preco_venda = val
+                else:
+                    preco_locacao = val
+            else:
+                if finalidade == "Venda":
+                    preco_venda = val
+                else:
+                    preco_locacao = val
+
     dormitorios = ""
     suites = ""
     banheiros = ""
     garagens = ""
+
+    stats = card.select(".property-stats .col-6")
+    for stat in stats:
+        txt = stat.get_text(strip=True)
+        m = re.match(r"(\d+)", txt)
+        if not m:
+            continue
+        val = m.group(1)
+        lower = txt.lower()
+        if "dorm" in lower:
+            dormitorios = val
+        elif "suíte" in lower or "suite" in lower:
+            suites = val
+        elif "banho" in lower:
+            banheiros = val
+        elif "vaga" in lower:
+            garagens = val
+
+    latitude = ""
+    longitude = ""
+    endereco = ""
+    descricao = ""
     area_total = ""
     area_util = ""
 
-    # Subrequisição para pegar os detalhes
     try:
-        time.sleep(0.5)
+        time.sleep(0.3)
+        print(f"    -> Detalhes: Ref {codigo}...", end=" ", flush=True)
         d_resp = session.get(url, headers=HEADERS, timeout=12)
         if d_resp.status_code == 200:
             d_soup = BeautifulSoup(d_resp.text, "lxml")
             full_text = d_soup.get_text(" ", strip=True)
-            
-            # Descrição Geral do Imóvel
+
             desc_el = d_soup.select_one(".descricao-imovel, #descricao, .texto, .property-description")
             if desc_el:
                 descricao = desc_el.get_text(separator="\n", strip=True)
             else:
-                # Fallback em WebForms C# geralmente tem paragrafos
                 ps = d_soup.find_all("p")
                 long_ps = [p.get_text(strip=True) for p in ps if len(p.get_text(strip=True)) > 80]
                 if long_ps:
                     descricao = "\n".join(long_ps)
 
-            # Heurística para Valores
-            c_match = re.search(r"Condom[íi]nio[^\dR\$]*?(?:R\$)?\s*([\d.,]+)", full_text, re.IGNORECASE)
-            if c_match:
-                valor_condominio = c_match.group(1).strip()
-            
-            i_match = re.search(r"IPTU[^\dR\$]*?(?:R\$)?\s*([\d.,]+)", full_text, re.IGNORECASE)
-            if i_match:
-                valor_iptu = i_match.group(1).strip()
-
-            # Extração de Coordenadas em Mapas/Scripts
             m_lat = re.search(r"lat\s*[:=]\s*'?(-?\d+\.\d+)'?", d_resp.text)
             m_lon = re.search(r"lng\s*[:=]\s*'?(-?\d+\.\d+)'?", d_resp.text)
             if m_lat and m_lon:
                 latitude = m_lat.group(1)
                 longitude = m_lon.group(1)
 
-            # Extração de atributos e tipos (quarto, vagas) em blocos de texto
-            # Muitas vezes WebForms C# lista os resumos em li, td, span
-            q_match = re.search(r"(\d+)\s*(?:Quarto|Dormit[óo]rio)", full_text, re.IGNORECASE)
-            if q_match: dormitorios = q_match.group(1)
-            
-            s_match = re.search(r"(\d+)\s*Su[íi]te", full_text, re.IGNORECASE)
-            if s_match: suites = s_match.group(1)
-
-            b_match = re.search(r"(\d+)\s*Banheiro", full_text, re.IGNORECASE)
-            if b_match: banheiros = b_match.group(1)
-
-            v_match = re.search(r"(\d+)\s*Vaga", full_text, re.IGNORECASE)
-            if v_match: garagens = v_match.group(1)
-
             a_match = re.search(r"([\d.,]+)\s*m²\s*[A-Za-z\s]*(?:[Úu]til|Constru)", full_text, re.IGNORECASE)
-            if a_match: area_util = a_match.group(1)
+            if a_match:
+                area_util = a_match.group(1)
 
             t_match = re.search(r"([\d.,]+)\s*m²\s*[A-Za-z\s]*(?:Total)", full_text, re.IGNORECASE)
-            if t_match: area_total = t_match.group(1)
+            if t_match:
+                area_total = t_match.group(1)
 
-            # Identificar o Tipo pelo título e texto (ex: Apartamento, Casa)
-            tipos = ["Casa", "Apartamento", "Terreno", "Comercial", "Kitnet", "Fazenda", "Sítio", "Salão"]
-            for t in tipos:
-                if t.lower() in getattr(d_soup.title, "text", "").lower() or t.lower() in full_text[:400].lower():
-                    tipo = t
-                    break
-
-            # Às vezes endereço ou rua vêm direto
             e_match = re.search(r"Endereço[:\s]*([^,.\n\t]{5,50})", full_text, re.IGNORECASE)
-            if e_match: endereco = e_match.group(1).strip()
-            
-    except Exception as e:
-        print(f"    - Aviso ao navegar pro interior de Sape: {e}")
+            if e_match:
+                endereco = e_match.group(1).strip()
 
-    # Fallback se não pegou nada que indique Casa ou Apartamento
+        print("OK", flush=True)
+    except Exception as e:
+        print(f"ERRO: {e}", flush=True)
+
     if not tipo:
         tipo = "Indefinido"
-    
+
     return {
         "fonte": "Sape",
         "codigo": codigo,
-        "titulo": titulo,
+        "titulo": bairro,
         "tipo": tipo,
         "subtipo": "",
         "finalidade": finalidade,
@@ -185,7 +180,7 @@ class SapeScraper(BaseScraper):
     name = "Sape"
     csv_file = "sape.csv"
 
-    def scrape(self, max_pages: int = 15) -> list[dict]:
+    def scrape(self, max_pages: int = 30) -> list[dict]:
         all_props = []
         seen_codes = set()
         session = requests.Session()
@@ -193,12 +188,11 @@ class SapeScraper(BaseScraper):
         for listing_path in LISTING_URLS:
             finalidade = "Locacao" if "Alugar" in listing_path else "Venda"
             page = 1
-            
+
             while page <= max_pages:
-                # O Sape usa URLs amigáveis /Alugar?page=X
                 query_string = f"?page={page}" if page > 1 else ""
                 url = f"{BASE_URL}{listing_path}{query_string}"
-                
+
                 print(f"  [Sape] Visitando: {url}")
                 try:
                     resp = session.get(url, headers=HEADERS, timeout=15)
@@ -208,13 +202,13 @@ class SapeScraper(BaseScraper):
                     break
 
                 soup = BeautifulSoup(resp.text, "lxml")
-                
-                # Os container dos cartoes
-                cards = soup.select(".card-imovel")
+
+                cards = soup.select("article.property-card")
                 if not cards:
-                    # Alternativas de layout (em caso de updates do SAPE)
+                    cards = soup.select(".card-imovel")
+                if not cards:
                     cards = soup.select(".property-item")
-                
+
                 if not cards:
                     print("  [Sape] Nenhum cartão encontrado. Fim da paginação provavelmente.")
                     break
@@ -228,10 +222,10 @@ class SapeScraper(BaseScraper):
                         new_count += 1
 
                 print(f"  [Sape] Pagina {page}: Recebeu {len(cards)} imoveis ({new_count} Processados limpos)")
-                
+
                 if new_count == 0:
                     break
-                
+
                 page += 1
                 time.sleep(1)
 
