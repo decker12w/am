@@ -1,5 +1,5 @@
 [tool.uv.workspace]
-members = ["pre_processing", "scrapper"]
+members = ["backend", "pre_processing", "scrapper"]
 
 [dependency-groups]
 dev = [

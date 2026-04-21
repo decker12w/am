@@ -9,7 +9,9 @@ O script substitui coordenadas ausentes/inválidas por geocodificação
 a partir de (bairro, cidade, estado), com cache em data/bairros_geocode.csv.
 """
 
+import re
 import sys
+import unicodedata
 from pathlib import Path
 
 import pandas as pd
@@ -18,6 +20,21 @@ from geopy.extra.rate_limiter import RateLimiter
 
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 CACHE_CSV = DATA_DIR / "bairros_geocode.csv"
+
+SUBS = {
+    r"\bjd\b": "jardim", r"\bj\b": "jardim", r"\bpq\b": "parque",
+    r"\bvl\b": "vila", r"\bres\b": "residencial", r"\bcond\b": "condominio",
+    r"\bch\b": "chacara", r"\blot\b": "loteamento", r"\bcid\b": "cidade",
+}
+
+
+def normalizar_bairro(s: str) -> str:
+    s = str(s).strip().lower()
+    s = unicodedata.normalize("NFKD", s).encode("ascii", errors="ignore").decode("utf-8")
+    for pat, repl in SUBS.items():
+        s = re.sub(pat, repl, s)
+    s = re.sub(r"\s+", " ", s).strip()
+    return s
 
 
 def load_cache() -> pd.DataFrame:
@@ -54,27 +71,47 @@ def main(fonte: str) -> None:
     print(f"Lendo {input_csv}")
     df = pd.read_csv(input_csv)
 
-    df[["latitude", "longitude"]] = None
+    if "latitude" not in df.columns:
+        df["latitude"] = None
+    if "longitude" not in df.columns:
+        df["longitude"] = None
+
+    df["latitude"] = pd.to_numeric(df["latitude"], errors="coerce")
+    df["longitude"] = pd.to_numeric(df["longitude"], errors="coerce")
+    df.loc[df["latitude"] == 0, "latitude"] = None
+    df.loc[df["longitude"] == 0, "longitude"] = None
+
+    df["bairro_norm"] = df["bairro"].apply(normalizar_bairro)
+
+    sem_coord = df["latitude"].isna()
+    print(f"{sem_coord.sum()} linhas sem coordenada de {len(df)} total")
 
     cache = load_cache()
-    bairros = df[["bairro", "cidade", "estado"]].drop_duplicates()
-    merged = bairros.merge(cache, on=["bairro", "cidade", "estado"], how="left")
-    falta = merged[merged["lat"].isna()][["bairro", "cidade", "estado"]]
+    cache["bairro_norm"] = cache["bairro"].apply(normalizar_bairro)
 
-    print(f"{len(bairros)} bairros únicos, {len(falta)} a geocodificar (cache: {len(cache)})")
+    bairros = df.loc[sem_coord, ["bairro_norm", "cidade", "estado"]].drop_duplicates()
+    merged = bairros.merge(cache[["bairro_norm", "lat", "lng"]].drop_duplicates("bairro_norm"),
+                           on="bairro_norm", how="left")
+    falta = merged[merged["lat"].isna()][["bairro_norm", "cidade", "estado"]]
+
+    print(f"{len(bairros)} bairros a preencher, {len(falta)} a geocodificar (cache: {len(cache)})")
 
     if not falta.empty:
-        novos = geocode_missing(falta)
+        falta_geo = falta.rename(columns={"bairro_norm": "bairro"})
+        novos = geocode_missing(falta_geo)
         cache = pd.concat([cache, novos], ignore_index=True)
-        cache.to_csv(CACHE_CSV, index=False)
+        cache["bairro_norm"] = cache["bairro"].apply(normalizar_bairro)
+        cache.drop(columns=["bairro_norm"]).to_csv(CACHE_CSV, index=False)
         print(f"Cache salvo em {CACHE_CSV} ({len(cache)} bairros)")
 
-    df = df.drop(columns=["latitude", "longitude"]).merge(
-        cache.rename(columns={"lat": "latitude", "lng": "longitude"}),
-        on=["bairro", "cidade", "estado"],
-        how="left",
+    cache_dedup = cache[["bairro_norm", "lat", "lng"]].drop_duplicates("bairro_norm")
+    fill = df.loc[sem_coord, ["bairro_norm"]].merge(
+        cache_dedup, on="bairro_norm", how="left",
     )
+    df.loc[sem_coord, "latitude"] = fill["lat"].values
+    df.loc[sem_coord, "longitude"] = fill["lng"].values
 
+    df = df.drop(columns=["bairro_norm"])
     df.to_csv(output_csv, index=False)
     faltando = df["latitude"].isna().sum()
     print(f"Salvo {output_csv} ({len(df)} linhas, {faltando} sem coord.)")
