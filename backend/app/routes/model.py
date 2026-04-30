@@ -5,7 +5,7 @@ from pydantic import BaseModel
 
 router = APIRouter(prefix="/model", tags=["model"])
 
-METRICS_PATH = Path(__file__).parents[3] / "models" / "metrics.json"
+METRICS_PATH = Path(__file__).parents[2] / "models" / "metrics.json"
 
 
 class ModelMetrics(BaseModel):

@@ -1,4 +1,3 @@
-import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
@@ -7,26 +6,7 @@ import { ResultCard, type PredictionResult } from "@/components/ResultCard";
 import { api, type ModelMetrics } from "@/lib/api";
 import { Brain, ShieldCheck, Zap } from "lucide-react";
 
-export const Route = createFileRoute("/")({
-  head: () => ({
-    meta: [
-      { title: "RentIQ — Previsão inteligente de aluguel em São Carlos - SP" },
-      {
-        name: "description",
-        content:
-          "Calcule o valor justo de aluguel do seu imóvel em São Carlos com Machine Learning. Previsão precisa baseada em dados reais do mercado.",
-      },
-      { property: "og:title", content: "RentIQ — Previsão inteligente de aluguel" },
-      {
-        property: "og:description",
-        content: "Plataforma com Machine Learning para prever aluguéis em São Carlos - SP.",
-      },
-    ],
-  }),
-  component: Index,
-});
-
-function Index() {
+export default function App() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<PredictionResult | null>(null);
   const [metrics, setMetrics] = useState<ModelMetrics | null>(null);
@@ -98,7 +78,8 @@ function Index() {
                 {metrics && (
                   <span className="inline-flex items-center gap-1.5">
                     <Brain className="h-3.5 w-3.5 text-primary" />
-                    R² {(metrics.r2 * 100).toFixed(1)}% · MAE R$ {metrics.mae.toLocaleString("pt-BR", { maximumFractionDigits: 0 })}
+                    R² {(metrics.r2 * 100).toFixed(1)}% · MAE R${" "}
+                    {metrics.mae.toLocaleString("pt-BR", { maximumFractionDigits: 0 })}
                   </span>
                 )}
               </div>

@@ -15,6 +15,8 @@ RUN uv sync --frozen --no-dev --package backend
 # Runtime stage — lean image with only what's needed
 FROM python:3.12-slim AS runtime
 
+RUN apt-get update && apt-get install -y --no-install-recommends libgomp1 && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 
 COPY --from=builder /app/.venv /app/.venv

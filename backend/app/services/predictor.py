@@ -9,7 +9,7 @@ from pathlib import Path
 
 from app.config import settings
 
-METRICS_PATH = Path(__file__).parents[3] / "models" / "metrics.json"
+METRICS_PATH = Path(__file__).parents[2] / "models" / "metrics.json"
 
 _ABBREV = {r"\bjd\b": "jardim", r"\bpq\b": "parque", r"\bvl\b": "vila",
            r"\bres\b": "residencial", r"\bcond\b": "condominio", r"\bch\b": "chacara"}
@@ -62,7 +62,7 @@ TYPE_MAP = {"apartment": "apartamento", "house": "casa", "studio": "apartamento"
 def _load_model():
     path = Path(settings.MODEL_PATH)
     if not path.is_absolute():
-        path = Path(__file__).parents[3] / path
+        path = Path(__file__).parents[2] / path
     return joblib.load(path)
 
 
