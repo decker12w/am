@@ -94,10 +94,16 @@ docker compose down -v       # para e remove o volume do banco
 
 ### Pré-requisitos
 
-- Python >= 3.12 — [download](https://www.python.org/downloads/)
-- [uv](https://docs.astral.sh/uv/getting-started/installation/) (gerenciador de pacotes Python)
-- [Bun](https://bun.sh/) >= 1 (runtime e gerenciador de pacotes Node)
-- PostgreSQL >= 16 rodando localmente
+Instale as seguintes dependências antes de prosseguir:
+
+| Dependência | Versão mínima | Download |
+|-------------|--------------|---------|
+| Python | 3.12 | https://www.python.org/downloads/ |
+| uv | qualquer | https://docs.astral.sh/uv/getting-started/installation/ |
+| Bun | 1.x | https://bun.sh/ |
+| PostgreSQL | 16 | https://www.postgresql.org/download/ |
+
+> **Atenção:** o PostgreSQL precisa estar instalado e em execução na máquina antes de seguir os passos abaixo.
 
 ### 1. Clone o repositório
 
