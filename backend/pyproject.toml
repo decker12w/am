@@ -5,5 +5,14 @@ description = "API backend"
 requires-python = ">=3.12"
 dependencies = [
     "fastapi>=0.115.0",
+    "joblib>=1.5.3",
+    "lightgbm>=4.6.0",
+    "numpy>=1.26.0",
+    "pandas>=2.2.0",
+    "psycopg2-binary>=2.9.12",
+    "pydantic-settings>=2.14.0",
+    "python-dotenv>=1.2.2",
+    "python-ulid>=3.1.0",
+    "sqlmodel>=0.0.38",
     "uvicorn[standard]>=0.34.0",
 ]

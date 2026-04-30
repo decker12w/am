@@ -8,6 +8,17 @@ API_URL = "https://www.centerimoveis.com/api/service/consult"
 
 IND_TYPE_MAP = {"L": "Locacao", "V": "Venda"}
 
+
+def _fmt_br(val) -> str:
+    """Format a numeric value as BR currency string (e.g. 1.500,00)."""
+    if val is None or val == "" or val == 0:
+        return ""
+    try:
+        return f"{float(val):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+    except (ValueError, TypeError):
+        return ""
+
+
 def _parse_doc(doc: dict) -> dict:
     """Convert a Solr document from the Center API to our normalized schema."""
     ind_type = doc.get("indType", "")
@@ -26,9 +37,10 @@ def _parse_doc(doc: dict) -> dict:
     categoria = doc.get("namCategory", "")
     subcategoria = doc.get("namSubCategory", "")
 
-    area_total = str(doc.get("prop_char_5", ""))
-    area_util = str(doc.get("prop_char_2", ""))
-    area_construida = str(doc.get("prop_char_95", ""))
+    area_total = str(doc.get("prop_char_2", "") or "")
+    area_construida = str(doc.get("prop_char_95", "") or "")
+    area_terreno = str(doc.get("prop_char_1", "") or "")
+    area_util = area_construida or area_total
 
     url_category = categoria.lower() if categoria else "imovel"
     url_city = doc.get("namCity", "").lower().replace(" ", "-") if doc.get("namCity") else "cidade"
@@ -44,8 +56,8 @@ def _parse_doc(doc: dict) -> dict:
         "finalidade": finalidade,
         "preco_locacao": preco_locacao,
         "preco_venda": preco_venda,
-        "valor_condominio": str(doc.get("valCondominium", "") or ""),
-        "valor_iptu": str(doc.get("valMonthIptu", "") or ""),
+        "valor_condominio": _fmt_br(doc.get("valCondominium")),
+        "valor_iptu": _fmt_br(doc.get("valMonthIptu")),
         "bairro": doc.get("namDistrict", ""),
         "cidade": doc.get("namCity", ""),
         "estado": doc.get("namState", ""),
@@ -59,7 +71,7 @@ def _parse_doc(doc: dict) -> dict:
         "area_total": area_total,
         "area_construida": area_construida,
         "area_util": area_util,
-        "area_terreno": "",
+        "area_terreno": area_terreno,
         "descricao": doc.get("desTitleSite", ""),
         "url": f"{BASE_URL}/imovel/{'locacao' if ind_type == 'L' else 'venda'}/{url_category}/{url_city}/{url_district}/{idt}",
     }

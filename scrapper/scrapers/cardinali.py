@@ -166,6 +166,35 @@ def _parse_card(card: BeautifulSoup, session: requests.Session = None) -> dict |
                 if end_el:
                     endereco = end_el.get_text(strip=True)
 
+                # Extrair área da página de detalhes quando ausente no card
+                if not specs.get("area_construida"):
+                    el = d_soup.select_one("[class*='a-const-ico-imo']")
+                    if el:
+                        m = re.search(r"([\d.,]+)", el.get_text())
+                        if m:
+                            specs["area_construida"] = m.group(1)
+
+                if not specs.get("area_total"):
+                    el = d_soup.select_one("[class*='a-total-ico-imo']")
+                    if el:
+                        m = re.search(r"([\d.,]+)", el.get_text())
+                        if m:
+                            specs["area_total"] = m.group(1)
+
+                if not specs.get("area_util"):
+                    el = d_soup.select_one("[class*='a-util-ico-imo']")
+                    if el:
+                        m = re.search(r"([\d.,]+)", el.get_text())
+                        if m:
+                            specs["area_util"] = m.group(1)
+
+                if not specs.get("area_terreno"):
+                    el = d_soup.select_one("[class*='a-terr-ico-imo']")
+                    if el:
+                        m = re.search(r"([\d.,]+)", el.get_text())
+                        if m:
+                            specs["area_terreno"] = m.group(1)
+
         except Exception:
             pass
 

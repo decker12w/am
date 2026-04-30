@@ -11,6 +11,16 @@ CITY_ID = 1  # São Carlos
 IND_TYPE_MAP = {"L": "Locacao", "V": "Venda"}
 
 
+def _fmt_br(val) -> str:
+    """Format a numeric value as BR currency string (e.g. 1.500,00)."""
+    if val is None or val == "" or val == 0:
+        return ""
+    try:
+        return f"{float(val):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+    except (ValueError, TypeError):
+        return ""
+
+
 def _parse_doc(doc: dict) -> dict:
     """Convert a Solr document from the API to our normalized schema."""
     ind_type = doc.get("indType", "")
@@ -19,9 +29,9 @@ def _parse_doc(doc: dict) -> dict:
     preco_locacao = ""
     preco_venda = ""
     if ind_type == "L" and doc.get("valLocation"):
-        preco_locacao = f"{doc['valLocation']:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+        preco_locacao = _fmt_br(doc["valLocation"])
     if doc.get("valSales"):
-        preco_venda = f"{doc['valSales']:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+        preco_venda = _fmt_br(doc["valSales"])
 
     categoria = doc.get("namCategory", "")
     subcategoria = doc.get("namSubCategory", "")
@@ -39,8 +49,8 @@ def _parse_doc(doc: dict) -> dict:
         "finalidade": finalidade,
         "preco_locacao": preco_locacao,
         "preco_venda": preco_venda,
-        "valor_condominio": str(doc.get("valCondominium", "") or ""),
-        "valor_iptu": str(doc.get("valMonthIptu", "") or ""),
+        "valor_condominio": _fmt_br(doc.get("valCondominium")),
+        "valor_iptu": _fmt_br(doc.get("valMonthIptu")),
         "bairro": doc.get("namDistrict", ""),
         "cidade": doc.get("namCity", ""),
         "estado": doc.get("namState", ""),

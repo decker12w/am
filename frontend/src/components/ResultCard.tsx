@@ -1,16 +1,17 @@
 import { Home, TrendingUp, Loader2, Sparkles, Info, BarChart3 } from "lucide-react";
+import type { ModelMetrics } from "@/lib/api";
 
 export type ImpactFactor = {
   label: string;
-  value: number; // R$ contribution (can be negative)
-  weight: number; // 0-100 visual width
+  value: number;
+  weight: number;
 };
 
 export type PredictionResult = {
   price: number;
   min: number;
   max: number;
-  marginPct: number;
+  margin_pct: number;
   factors: ImpactFactor[];
 };
 
@@ -22,12 +23,13 @@ const formatBRLSigned = (n: number) => (n >= 0 ? `+${formatBRL(n)}` : `-${format
 type Props = {
   loading: boolean;
   result: PredictionResult | null;
+  metrics: ModelMetrics | null;
 };
 
-export function ResultCard({ loading, result }: Props) {
+export function ResultCard({ loading, result, metrics }: Props) {
   return (
     <div
-      className="relative overflow-hidden rounded-2xl border border-border p-5 shadow-[var(--shadow-card)] sm:p-7"
+      className="relative overflow-hidden rounded-2xl border border-border p-5 shadow-(--shadow-card) sm:p-7"
       style={{ background: "var(--gradient-hero)" }}
     >
       <div
@@ -46,6 +48,22 @@ export function ResultCard({ loading, result }: Props) {
               Resultado da estimativa
             </h2>
           </div>
+          {metrics && (
+            <div className="flex flex-col items-end gap-1">
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Precisão do modelo
+              </span>
+              <span
+                className="bg-clip-text text-xl font-extrabold text-transparent"
+                style={{ backgroundImage: "var(--gradient-primary)" }}
+              >
+                {(metrics.r2 * 100).toFixed(1)}%
+              </span>
+              <span className="text-[10px] text-muted-foreground">
+                MAE ± R$ {metrics.mae.toLocaleString("pt-BR", { maximumFractionDigits: 0 })}
+              </span>
+            </div>
+          )}
         </div>
 
         {loading && <LoadingState />}
@@ -101,9 +119,6 @@ function LoadingState() {
 }
 
 function ResultState({ result }: { result: PredictionResult }) {
-  const formatBRL2 = (n: number) =>
-    n.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
-
   return (
     <div>
       <div className="rounded-xl border border-border bg-card/60 p-5 backdrop-blur-sm">
@@ -113,7 +128,7 @@ function ResultState({ result }: { result: PredictionResult }) {
             className="bg-clip-text text-4xl font-extrabold tracking-tight text-transparent sm:text-5xl"
             style={{ backgroundImage: "var(--gradient-primary)" }}
           >
-            {formatBRL2(result.price)}
+            {formatBRL(result.price)}
           </span>
           <span className="text-sm font-medium text-muted-foreground">/mês</span>
         </div>
@@ -121,33 +136,26 @@ function ResultState({ result }: { result: PredictionResult }) {
         <div className="mt-4 flex flex-wrap items-center gap-2">
           <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-semibold text-primary">
             <TrendingUp className="h-3 w-3" />
-            Margem de erro: ± {result.marginPct}%
+            Margem de erro: ± {result.margin_pct.toFixed(1)}%
           </span>
           <span className="text-xs text-muted-foreground">
-            Faixa: {formatBRL2(result.min)} – {formatBRL2(result.max)}
+            Faixa: {formatBRL(result.min)} – {formatBRL(result.max)}
           </span>
         </div>
       </div>
 
-      <div className="mt-5">
-        <p className="mb-3 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          <BarChart3 className="h-3.5 w-3.5" />
-          Fatores de impacto
-        </p>
-        <ul className="space-y-2.5">
-          {result.factors.map((f) => {
-            const positive = f.value >= 0;
-            return (
+      {result.factors.length > 0 && (
+        <div className="mt-5">
+          <p className="mb-3 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            <BarChart3 className="h-3.5 w-3.5" />
+            Fatores de impacto
+          </p>
+          <ul className="space-y-2.5">
+            {result.factors.map((f) => (
               <li key={f.label}>
                 <div className="mb-1 flex items-center justify-between text-xs">
                   <span className="font-medium text-foreground">{f.label}</span>
-                  <span
-                    className={
-                      positive
-                        ? "font-semibold text-primary tabular-nums"
-                        : "font-semibold text-destructive tabular-nums"
-                    }
-                  >
+                  <span className="font-semibold text-primary tabular-nums">
                     {formatBRLSigned(f.value)}
                   </span>
                 </div>
@@ -156,15 +164,15 @@ function ResultState({ result }: { result: PredictionResult }) {
                     className="h-full rounded-full transition-all duration-700"
                     style={{
                       width: `${Math.min(100, Math.max(8, f.weight))}%`,
-                      background: positive ? "var(--gradient-primary)" : "var(--color-destructive)",
+                      background: "var(--gradient-primary)",
                     }}
                   />
                 </div>
               </li>
-            );
-          })}
-        </ul>
-      </div>
+            ))}
+          </ul>
+        </div>
+      )}
 
       <div className="mt-5 flex items-start gap-2 rounded-lg border border-border bg-muted/40 p-3">
         <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" />

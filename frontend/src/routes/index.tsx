@@ -1,10 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { PredictionForm, type PropertyData } from "@/components/PredictionForm";
 import { ResultCard, type PredictionResult } from "@/components/ResultCard";
-import { mockPredict } from "@/lib/predict";
+import { api, type ModelMetrics } from "@/lib/api";
 import { Brain, ShieldCheck, Zap } from "lucide-react";
 
 export const Route = createFileRoute("/")({
@@ -29,14 +29,28 @@ export const Route = createFileRoute("/")({
 function Index() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<PredictionResult | null>(null);
+  const [metrics, setMetrics] = useState<ModelMetrics | null>(null);
 
-  const handleSubmit = (data: PropertyData) => {
+  useEffect(() => {
+    api.modelMetrics().then(setMetrics).catch(() => null);
+  }, []);
+
+  const handleSubmit = async (data: PropertyData) => {
     setLoading(true);
     setResult(null);
-    setTimeout(() => {
-      setResult(mockPredict(data));
+    try {
+      const prediction = await api.predict({
+        type: data.type,
+        neighborhood_id: data.neighborhood_id,
+        area: data.area,
+        bedrooms: data.bedrooms,
+        bathrooms: data.bathrooms,
+        parking: data.parking,
+      });
+      setResult(prediction);
+    } finally {
       setLoading(false);
-    }, 1400);
+    }
   };
 
   return (
@@ -81,16 +95,19 @@ function Index() {
                 <span className="inline-flex items-center gap-1.5">
                   <ShieldCheck className="h-3.5 w-3.5 text-primary" /> Modelo validado
                 </span>
-                <span className="inline-flex items-center gap-1.5">
-                  <Brain className="h-3.5 w-3.5 text-primary" /> IA explicável
-                </span>
+                {metrics && (
+                  <span className="inline-flex items-center gap-1.5">
+                    <Brain className="h-3.5 w-3.5 text-primary" />
+                    R² {(metrics.r2 * 100).toFixed(1)}% · MAE R$ {metrics.mae.toLocaleString("pt-BR", { maximumFractionDigits: 0 })}
+                  </span>
+                )}
               </div>
             </div>
 
             <div className="mx-auto mt-10 grid max-w-6xl grid-cols-1 gap-6 lg:grid-cols-2">
               <PredictionForm onSubmit={handleSubmit} loading={loading} />
               <div className="lg:sticky lg:top-24 lg:self-start">
-                <ResultCard loading={loading} result={result} />
+                <ResultCard loading={loading} result={result} metrics={metrics} />
               </div>
             </div>
           </div>

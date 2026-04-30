@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Home,
   MapPin,
@@ -6,39 +6,26 @@ import {
   BedDouble,
   Bath,
   Car,
-  Sparkles,
   Calculator,
   Loader2,
   Minus,
   Plus,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { api, type Neighborhood } from "@/lib/api";
 
 export type PropertyData = {
   type: string;
-  neighborhood: string;
+  neighborhood_id: string;
   area: number;
   bedrooms: number;
   bathrooms: number;
   parking: number;
-  furnished: boolean;
-  leisureArea: boolean;
-  security: boolean;
 };
 
 const propertyTypes = [
   { value: "apartment", label: "Apartamento" },
   { value: "house", label: "Casa" },
   { value: "studio", label: "Studio / Kitnet" },
-];
-
-const neighborhoods = [
-  { value: "centro", label: "Centro" },
-  { value: "cidade-universitaria", label: "Cidade Universitária" },
-  { value: "santa-felicia", label: "Santa Felícia" },
-  { value: "vila-prado", label: "Vila Prado" },
-  { value: "jardim-paulista", label: "Jardim Paulista" },
-  { value: "parque-faber", label: "Parque Faber" },
 ];
 
 type Props = {
@@ -92,17 +79,24 @@ function FieldLabel({ icon: Icon, children }: { icon: React.ElementType; childre
 }
 
 export function PredictionForm({ onSubmit, loading }: Props) {
+  const [neighborhoods, setNeighborhoods] = useState<Neighborhood[]>([]);
   const [data, setData] = useState<PropertyData>({
     type: "apartment",
-    neighborhood: "centro",
+    neighborhood_id: "",
     area: 75,
     bedrooms: 2,
     bathrooms: 1,
     parking: 1,
-    furnished: false,
-    leisureArea: true,
-    security: false,
   });
+
+  useEffect(() => {
+    api.neighborhoods().then((list) => {
+      setNeighborhoods(list);
+      if (list.length > 0 && !data.neighborhood_id) {
+        setData((d) => ({ ...d, neighborhood_id: list[0].id }));
+      }
+    });
+  }, []);
 
   const update = <K extends keyof PropertyData>(key: K, value: PropertyData[K]) =>
     setData((d) => ({ ...d, [key]: value }));
@@ -113,7 +107,7 @@ export function PredictionForm({ onSubmit, loading }: Props) {
         e.preventDefault();
         onSubmit(data);
       }}
-      className="rounded-2xl border border-border bg-card p-5 shadow-[var(--shadow-card)] sm:p-7"
+      className="rounded-2xl border border-border bg-card p-5 shadow-(--shadow-card) sm:p-7"
     >
       <div className="mb-6">
         <h2 className="text-lg font-bold tracking-tight text-foreground sm:text-xl">
@@ -143,13 +137,17 @@ export function PredictionForm({ onSubmit, loading }: Props) {
         <div>
           <FieldLabel icon={MapPin}>Bairro</FieldLabel>
           <select
-            value={data.neighborhood}
-            onChange={(e) => update("neighborhood", e.target.value)}
+            value={data.neighborhood_id}
+            onChange={(e) => update("neighborhood_id", e.target.value)}
             className="h-10 w-full rounded-lg border border-input bg-card px-3 text-sm text-foreground shadow-sm transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring/30"
+            disabled={neighborhoods.length === 0}
           >
+            {neighborhoods.length === 0 && (
+              <option value="">Carregando...</option>
+            )}
             {neighborhoods.map((n) => (
-              <option key={n.value} value={n.value}>
-                {n.label}
+              <option key={n.id} value={n.id}>
+                {n.name.replace(/\b\w/g, (c) => c.toUpperCase())}
               </option>
             ))}
           </select>
@@ -188,60 +186,10 @@ export function PredictionForm({ onSubmit, loading }: Props) {
         </div>
       </div>
 
-      <div className="mt-6">
-        <p className="mb-3 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          <Sparkles className="h-3.5 w-3.5" />
-          Características adicionais
-        </p>
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-          {[
-            { key: "furnished" as const, label: "Mobiliado" },
-            { key: "leisureArea" as const, label: "Área de lazer" },
-            { key: "security" as const, label: "Segurança 24h" },
-          ].map((opt) => {
-            const active = data[opt.key];
-            return (
-              <button
-                key={opt.key}
-                type="button"
-                onClick={() => update(opt.key, !active)}
-                className={cn(
-                  "flex items-center gap-2 rounded-lg border px-3 py-2.5 text-sm font-medium transition",
-                  active
-                    ? "border-primary/60 bg-primary/5 text-primary shadow-sm"
-                    : "border-border bg-card text-muted-foreground hover:border-primary/30 hover:text-foreground",
-                )}
-              >
-                <span
-                  className={cn(
-                    "flex h-4 w-4 items-center justify-center rounded border-2 transition",
-                    active ? "border-primary bg-primary" : "border-muted-foreground/40",
-                  )}
-                >
-                  {active && (
-                    <svg viewBox="0 0 12 12" className="h-3 w-3 text-primary-foreground">
-                      <path
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M2 6l3 3 5-6"
-                      />
-                    </svg>
-                  )}
-                </span>
-                {opt.label}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
       <button
         type="submit"
-        disabled={loading}
-        className="mt-7 flex h-12 w-full items-center justify-center gap-2 rounded-xl text-sm font-semibold text-primary-foreground shadow-[var(--shadow-elegant)] transition hover:opacity-95 active:scale-[0.99] disabled:opacity-70"
+        disabled={loading || !data.neighborhood_id}
+        className="mt-7 flex h-12 w-full items-center justify-center gap-2 rounded-xl text-sm font-semibold text-primary-foreground shadow-(--shadow-elegant) transition hover:opacity-95 active:scale-[0.99] disabled:opacity-70"
         style={{ background: "var(--gradient-primary)" }}
       >
         {loading ? (
