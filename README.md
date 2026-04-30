@@ -10,16 +10,16 @@ O modelo preditivo é um **LightGBM** treinado com 1.152 amostras, com R² de 0,
 
 ## Stack
 
-| Camada | Tecnologia |
-|--------|-----------|
-| Frontend | React 18 + TypeScript + Vite |
-| Backend | FastAPI + Uvicorn (Python 3.12) |
-| ML | LightGBM, scikit-learn, pandas |
-| Banco de dados | PostgreSQL 16 |
-| Pacotes Python | uv |
-| Pacotes Node | Bun |
-| Servidor estático | Nginx |
-| Contêineres | Docker + Docker Compose |
+| Camada            | Tecnologia                      |
+| ----------------- | ------------------------------- |
+| Frontend          | React 18 + TypeScript + Vite    |
+| Backend           | FastAPI + Uvicorn (Python 3.12) |
+| ML                | LightGBM, scikit-learn, pandas  |
+| Banco de dados    | PostgreSQL 16                   |
+| Pacotes Python    | uv                              |
+| Pacotes Node      | Bun                             |
+| Servidor estático | Nginx                           |
+| Contêineres       | Docker + Docker Compose         |
 
 ## Arquitetura
 
@@ -74,12 +74,12 @@ docker compose up --build
 
 **4. Acesse**
 
-| Serviço | URL |
-|---------|-----|
-| Interface web | http://localhost |
-| API REST | http://localhost:8000 |
-| Documentação interativa (Swagger) | http://localhost:8000/docs |
-| ReDoc | http://localhost:8000/redoc |
+| Serviço                           | URL                         |
+| --------------------------------- | --------------------------- |
+| Interface web                     | http://localhost            |
+| API REST                          | http://localhost:8000       |
+| Documentação interativa (Swagger) | http://localhost:8000/docs  |
+| ReDoc                             | http://localhost:8000/redoc |
 
 ### Parar
 
@@ -96,12 +96,12 @@ docker compose down -v       # para e remove o volume do banco
 
 Instale as seguintes dependências antes de prosseguir:
 
-| Dependência | Versão mínima | Download |
-|-------------|--------------|---------|
-| Python | 3.12 | https://www.python.org/downloads/ |
-| uv | qualquer | https://docs.astral.sh/uv/getting-started/installation/ |
-| Bun | 1.x | https://bun.sh/ |
-| PostgreSQL | 16 | https://www.postgresql.org/download/ |
+| Dependência | Versão mínima | Download                                                |
+| ----------- | ------------- | ------------------------------------------------------- |
+| Python      | 3.12          | https://www.python.org/downloads/                       |
+| uv          | qualquer      | https://docs.astral.sh/uv/getting-started/installation/ |
+| Bun         | 1.x           | https://bun.sh/                                         |
+| PostgreSQL  | 16            | https://www.postgresql.org/download/                    |
 
 > **Atenção:** o PostgreSQL precisa estar instalado e em execução na máquina antes de seguir os passos abaixo.
 
@@ -114,10 +114,23 @@ cd rentiq
 
 ### 2. Configure o banco de dados
 
+Ligue o processo do PostgreSQL local
+
+```bash
+brew services start postgresql@14 (MacOS)
+sudo service postgresql start (Linux)
+```
+
+Crie um usuário e senha para o PostgreSQL:
+
+```bash
+psql postgres -c "CREATE ROLE postgres WITH SUPERUSER LOGIN PASSWORD 'postgres';"
+```
+
 Crie um banco chamado `am` no PostgreSQL local:
 
 ```bash
-psql -U postgres -c "CREATE DATABASE am;"
+psql postgres -c "CREATE DATABASE am;"
 ```
 
 ### 3. Configure e inicie o backend
@@ -182,11 +195,11 @@ rentiq/
 
 ## API — Endpoints Principais
 
-| Método | Rota | Descrição |
-|--------|------|-----------|
-| `GET` | `/api/neighborhoods` | Lista bairros disponíveis |
-| `POST` | `/api/predictions` | Retorna predição de preço |
-| `GET` | `/api/model/metrics` | Métricas do modelo (R², MAE) |
+| Método | Rota                 | Descrição                    |
+| ------ | -------------------- | ---------------------------- |
+| `GET`  | `/api/neighborhoods` | Lista bairros disponíveis    |
+| `POST` | `/api/predictions`   | Retorna predição de preço    |
+| `GET`  | `/api/model/metrics` | Métricas do modelo (R², MAE) |
 
 ### Exemplo de requisição
 
@@ -205,13 +218,13 @@ curl -X POST http://localhost:8000/api/predictions \
 
 ```json
 {
-  "price": 1450.00,
-  "min": 1200.00,
-  "max": 1700.00,
+  "price": 1450.0,
+  "min": 1200.0,
+  "max": 1700.0,
   "margin_pct": 0.17,
   "factors": [
     { "label": "Área útil", "value": 65.0, "weight": 0.41 },
-    { "label": "Bairro",    "value": 0.0,  "weight": 0.28 }
+    { "label": "Bairro", "value": 0.0, "weight": 0.28 }
   ]
 }
 ```
