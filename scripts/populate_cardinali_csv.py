@@ -84,16 +84,12 @@ def main(fonte: str) -> None:
 
     df["bairro_norm"] = df["bairro"].apply(normalizar_bairro)
 
-    # --- ALTERAÇÃO AQUI ---
     if fonte == "cardinali":
-        # Seleciona todas as linhas (True para todas) para forçar a substituição
         sem_coord = pd.Series(True, index=df.index)
         print(f"Fonte 'cardinali': Sobrescrevendo todas as {len(df)} linhas com valores geocodificados.")
     else:
-        # Lógica original: apenas onde está vazio
         sem_coord = df["latitude"].isna()
         print(f"{sem_coord.sum()} linhas sem coordenada de {len(df)} total")
-    # ----------------------
 
     cache = load_cache()
     cache["bairro_norm"] = cache["bairro"].apply(normalizar_bairro)

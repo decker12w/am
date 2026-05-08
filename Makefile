@@ -14,3 +14,7 @@ api-dev:
 
 api-prod:
 	cd backend && uv run uvicorn app.main:application --host 0.0.0.0 --port 8000
+
+front-back:
+	cd frontend && uv run npm run dev
+	cd backend && uv run uvicorn app.main:application --reload --host 0.0.0.0 --port 8000

@@ -34,9 +34,9 @@ RODOVIARIA_LAT, RODOVIARIA_LON = -22.0304, -47.8823
 FEATURES = [
     "tipo", "area_util", "bairro", "area_por_quarto",
     "dist_centro", "dist_ufscar", "dist_usp", "dist_rodoviaria",
-    "garagens", "total_comodos", "dormitorios", "banheiros",
-    "suites", "reformado_novo", "foco_estudante",
-    "latitude", "longitude",
+    "garagens", "dormitorios", "banheiros",
+    "suites", "reformado_novo",
+    "latitude", "longitude", "mobiliado", "piscina", "churrasqueira",
 ]
 
 FACTOR_LABELS = {
@@ -49,7 +49,6 @@ FACTOR_LABELS = {
     "tipo":           "Tipo do imóvel",
     "dist_rodoviaria": "Distância à rodoviária",
     "garagens":       "Vagas de garagem",
-    "total_comodos":  "Total de cômodos",
     "banheiros":      "Banheiros",
     "dormitorios":    "Quartos",
 }
@@ -79,6 +78,9 @@ def predict(
     parking: int,
     latitude: float,
     longitude: float,
+    mobiliado: bool = False,
+    piscina: bool = False,
+    churrasqueira: bool = False,
 ) -> dict:
     model = _load_model()
 
@@ -91,9 +93,10 @@ def predict(
         "garagens":       parking,
         "suites":         0,
         "reformado_novo": 0,
-        "foco_estudante": 0,
+        "mobiliado":      int(mobiliado),
+        "piscina":        int(piscina),
+        "churrasqueira":  int(churrasqueira),
         "area_por_quarto":  area / max(bedrooms, 1),
-        "total_comodos":    bedrooms + bathrooms,
         "latitude":       latitude,
         "longitude":      longitude,
         "dist_centro":    _dist(latitude, longitude, CENTRO_LAT, CENTRO_LON),

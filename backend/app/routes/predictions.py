@@ -17,6 +17,9 @@ class PredictionRequest(BaseModel):
     bedrooms: int
     bathrooms: int
     parking: int
+    mobiliado: bool = False
+    piscina: bool = False
+    churrasqueira: bool = False
 
 
 class ImpactFactor(BaseModel):
@@ -51,6 +54,9 @@ def create_prediction(body: PredictionRequest, session: Session = Depends(get_se
         parking=body.parking,
         latitude=neighborhood.latitude,
         longitude=neighborhood.longitude,
+        mobiliado=body.mobiliado,
+        piscina=body.piscina,
+        churrasqueira=body.churrasqueira,
     )
 
     session.add(Prediction(

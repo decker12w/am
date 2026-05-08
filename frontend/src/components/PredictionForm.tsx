@@ -10,6 +10,9 @@ import {
   Loader2,
   Minus,
   Plus,
+  Sofa,
+  Waves,
+  Flame,
 } from "lucide-react";
 import { api, type Neighborhood } from "@/lib/api";
 
@@ -20,6 +23,9 @@ export type PropertyData = {
   bedrooms: number;
   bathrooms: number;
   parking: number;
+  mobiliado: boolean;
+  piscina: boolean;
+  churrasqueira: boolean;
 };
 
 const propertyTypes = [
@@ -87,6 +93,9 @@ export function PredictionForm({ onSubmit, loading }: Props) {
     bedrooms: 2,
     bathrooms: 1,
     parking: 1,
+    mobiliado: false,
+    piscina: false,
+    churrasqueira: false,
   });
 
   useEffect(() => {
@@ -183,6 +192,31 @@ export function PredictionForm({ onSubmit, loading }: Props) {
         <div className="sm:col-span-2">
           <FieldLabel icon={Car}>Vagas de garagem</FieldLabel>
           <Stepper value={data.parking} onChange={(v) => update("parking", v)} max={6} />
+        </div>
+
+        <div className="sm:col-span-2">
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Comodidades</p>
+          <div className="flex flex-wrap gap-3">
+            {([
+              { key: "mobiliado", label: "Mobiliado", icon: Sofa },
+              { key: "piscina", label: "Piscina", icon: Waves },
+              { key: "churrasqueira", label: "Churrasqueira", icon: Flame },
+            ] as const).map(({ key, label, icon: Icon }) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => update(key, !data[key])}
+                className={`flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium transition ${
+                  data[key]
+                    ? "border-primary bg-primary/10 text-primary"
+                    : "border-border bg-card text-muted-foreground hover:border-primary/50"
+                }`}
+              >
+                <Icon className="h-4 w-4" />
+                {label}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 

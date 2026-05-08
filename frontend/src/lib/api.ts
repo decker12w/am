@@ -37,6 +37,9 @@ export type PredictionRequest = {
   bedrooms: number;
   bathrooms: number;
   parking: number;
+  mobiliado: boolean;
+  piscina: boolean;
+  churrasqueira: boolean;
 };
 
 export type ImpactFactor = {
