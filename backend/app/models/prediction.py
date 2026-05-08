@@ -11,6 +11,9 @@ class Prediction(SQLModel, table=True):
     bedrooms: int
     bathrooms: int
     parking: int
+    furnished: bool
+    leisure_area: bool
+    security: bool
     estimated_price: float
     price_min: float
     price_max: float
